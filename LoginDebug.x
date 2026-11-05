@@ -32,7 +32,16 @@ static os_log_t RFLog(void) {
   return log;
 }
 
-#define RFDLog(fmt, ...) os_log(RFLog(), "%{public}@", [NSString stringWithFormat:fmt, ##__VA_ARGS__])
+// A function instead of a macro around stringWithFormat:, so calls without
+// arguments don't trip -Wformat-security (which is an error in this build).
+static void RFDLog(NSString *format, ...) NS_FORMAT_FUNCTION(1, 2);
+static void RFDLog(NSString *format, ...) {
+  va_list args;
+  va_start(args, format);
+  NSString *message = [[NSString alloc] initWithFormat:format arguments:args];
+  va_end(args);
+  os_log(RFLog(), "%{public}@", message);
+}
 
 static NSString *RFErr(NSError *error) {
   return error ? [NSString stringWithFormat:@"%@ %ld", error.domain, (long)error.code] : @"ok";
